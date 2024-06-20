@@ -3,7 +3,7 @@
 # Load packages
 import pandas as pd
 import numpy as np
-import seaborn as sns
+from scipy.stats import weibull_min
 
 # Random Number Generator
 rng = np.random.default_rng(102)
@@ -12,8 +12,10 @@ rng = np.random.default_rng(102)
 # Define vehicle class
 class Vehicle:
 
-    def __init__(self, avg_mi, max_mi, op_days):
+    def __init__(self, make, model, avg_mi, max_mi, op_days):
         """Initializes the Vehicle instance with average trip mileage, max trip mileage, and annual operating days"""
+        self.make = make
+        self.model = model
         self.avg_mi = avg_mi
         self.max_mi = max_mi
         self.op_days = op_days
@@ -25,8 +27,11 @@ class Vehicle:
         """Return Series of Weibull-distributed trips for specified avg_mi, max_mi, and op_days"""
 
         # Generate trip lengths from weibull distribution
-        a = self.max_mi / self.avg_mi  # Define shape parameter as the ratio of max mileage over avg mileage
-        trips = pd.Series(rng.weibull(a, num_days)) * self.avg_mi
+        c = self.max_mi / self.avg_mi  # Define shape parameter as the ratio of max mileage over avg mileage
+        c = (c + 1)/2  # Bring shape parameter closer to 1
+        trips = pd.Series(weibull_min.rvs(c, size=num_days, random_state=rng.integers(0, 2**31)))
+        # Perform mean scaling
+        trips = trips * (self.avg_mi / np.mean(trips))
 
         # Set some trips to zero to reflect annual operating days
         # Note: Assumes vehicles operate Mon-Sun
@@ -83,6 +88,6 @@ class Vehicle:
 
 """
 ## Test ##
-test_vehicle = Vehicle(avg_mi=50, max_mi=120, op_days=220)
+test_vehicle = Vehicle(make='Ford', 'F-150 Lightning Pro', avg_mi=50, max_mi=120, op_days=220)
 test_vehicle.add_trips(pd.Timestamp('2023-01-01'), pd.Timestamp('2023-12-31'))
 """
